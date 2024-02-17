@@ -90,10 +90,13 @@ impl<T: Send + Clone + 'static> Signal<T> {
         }
     }
 
-    fn connect(&self, slot: impl Fn(T) + Send + 'static + Clone, name: Option<String>) {
+    fn connect(&self, slot: impl Fn(T) + Send + 'static + Clone) {
+        self.connect_named(slot, Uuid::new_v4().into());
+    }
+
+    fn connect_named(&self, slot: impl Fn(T) + Send + 'static + Clone, name: String) {
         let mut receiver = self.sender.subscribe();
 
-        let name = name.unwrap_or(Uuid::new_v4().into());
         _spawn(name.clone() ,async move {
             loop {
                 match receiver.recv().await {
@@ -125,11 +128,11 @@ fn main() {
         let basic_signal = Signal::new();
         let complex_signal: Signal<Potato> = Signal::new();
 
-        basic_signal.connect(|msg| println!("Slot1 received: {}", msg), None);
-        basic_signal.connect(|msg| println!("Slot2 received: {}", msg), None);
+        basic_signal.connect(|msg| println!("Slot1 received: {}", msg));
+        basic_signal.connect(|msg| println!("Slot2 received: {}", msg));
 
-        complex_signal.connect(|msg| println!("Complex Slot1 received: {:#?}", msg), None);
-        complex_signal.connect(|msg| println!("Complex Slot2 received: {:#?}", msg), None);
+        complex_signal.connect(|msg| println!("Complex Slot1 received: {:#?}", msg));
+        complex_signal.connect(|msg| println!("Complex Slot2 received: {:#?}", msg));
 
         basic_signal.emit(10);
         basic_signal.emit(20);
