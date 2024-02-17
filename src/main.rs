@@ -1,4 +1,4 @@
-use tokio::sync::broadcast;
+use tokio::sync::{broadcast, mpsc};
 use std::thread;
 
 use std::collections::HashMap;
@@ -109,6 +109,44 @@ impl<T: Send + Clone + 'static> Signal<T> {
                         dbg!(e);
                     }
                 }
+            }
+        });
+    }
+
+    fn emit(&self, message: T) {
+        let _ = self.sender.send(message);
+    }
+}
+
+
+// Move it to another file and use same traits and names as signal (No SignalNoClone)
+struct SignalNoClone<T> {
+    sender: mpsc::Sender<T>,
+    receiver: Option<mpsc::Receiver<T>>,
+}
+
+impl<T: Send + 'static> SignalNoClone<T> {
+    fn new() -> Self {
+        let (tx, rx) = mpsc::channel(100);
+        SignalNoClone {
+            sender: tx,
+            receiver: Some(rx),
+        }
+    }
+
+    fn connect(&mut self, slot: impl Fn(T) + Send + 'static + Clone) {
+        self.connect_named(slot, Uuid::new_v4().into());
+    }
+
+    fn connect_named(&mut self, slot: impl Fn(T) + Send + 'static + Clone, name: String) {
+        let mut receiver = self.receiver.take().unwrap();
+        _spawn(name.clone() ,async move {
+            // This method returns `None` if the channel has been closed and there are
+            // no remaining messages in the channel's buffer. This indicates that no
+            // further values can ever be received from this `Receiver`. The channel is
+            // closed when all senders have been dropped, or when [`close`] is called.
+            while let Some(msg) = receiver.recv().await {
+                slot(msg)
             }
         });
     }
