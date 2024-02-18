@@ -1,6 +1,4 @@
-use std::thread;
 use tokio::sync::{broadcast, mpsc};
-use tokio::time::{sleep, Duration};
 
 use lazy_static::lazy_static;
 use std::collections::HashMap;
@@ -79,21 +77,21 @@ where
     TASK_MASTER.lock().unwrap().spawn(name, f);
 }
 
-struct Signal<T> {
+pub struct Signal<T> {
     sender: broadcast::Sender<T>,
 }
 
 impl<T: Send + Clone + 'static> Signal<T> {
-    fn new() -> Self {
+    pub fn new() -> Self {
         let (tx, _) = broadcast::channel(100);
         Signal { sender: tx }
     }
 
-    fn connect(&self, slot: impl Fn(T) + Send + 'static + Clone) {
+    pub fn connect(&self, slot: impl Fn(T) + Send + 'static) {
         self.connect_named(slot, Uuid::new_v4().into());
     }
 
-    fn connect_named(&self, slot: impl Fn(T) + Send + 'static + Clone, name: String) {
+    pub fn connect_named(&self, slot: impl Fn(T) + Send + 'static, name: String) {
         let mut receiver = self.sender.subscribe();
 
         _spawn(name.clone(), async move {
@@ -112,23 +110,23 @@ impl<T: Send + Clone + 'static> Signal<T> {
         });
     }
 
-    fn emit_result(&self, message: T) -> Result<usize, broadcast::error::SendError<T>> {
+    pub fn emit_result(&self, message: T) -> Result<usize, broadcast::error::SendError<T>> {
         self.sender.send(message)
     }
 
-    fn emit(&self, message: T) {
+    pub fn emit(&self, message: T) {
         let _ = self.emit_result(message);
     }
 }
 
 // Move it to another file and use same traits and names as signal (No SignalNoClone)
-struct SignalNoClone<T> {
+pub struct SignalNoClone<T> {
     sender: mpsc::Sender<T>,
     receiver: Option<mpsc::Receiver<T>>,
 }
 
 impl<T: Send + 'static> SignalNoClone<T> {
-    fn new() -> Self {
+    pub fn new() -> Self {
         let (tx, rx) = mpsc::channel(100);
         SignalNoClone {
             sender: tx,
@@ -136,11 +134,11 @@ impl<T: Send + 'static> SignalNoClone<T> {
         }
     }
 
-    fn connect(&mut self, slot: impl Fn(T) + Send + 'static + Clone) {
+    pub fn connect(&mut self, slot: impl Fn(T) + Send + 'static) {
         self.connect_named(slot, Uuid::new_v4().into());
     }
 
-    fn connect_named(&mut self, slot: impl Fn(T) + Send + 'static + Clone, name: String) {
+    pub fn connect_named(&mut self, slot: impl Fn(T) + Send + 'static, name: String) {
         if self.receiver.is_none() {
             todo!("You can't connect twice in a no clone channel. Return error here");
         }
@@ -157,43 +155,11 @@ impl<T: Send + 'static> SignalNoClone<T> {
         });
     }
 
-    async fn emit_result(&self, message: T) -> Result<(), mpsc::error::SendError<T>> {
+    pub async fn emit_result(&self, message: T) -> Result<(), mpsc::error::SendError<T>> {
         self.sender.send(message).await
     }
 
-    async fn emit(&self, message: T) {
+    pub async fn emit(&self, message: T) {
         let _ = self.emit_result(message).await;
     }
-}
-
-#[derive(Clone, Debug)]
-struct Potato {
-    pub number: i64,
-}
-
-fn main() {
-    _spawn("Main loop".into(), async {
-        let basic_signal = Signal::new();
-        let complex_signal: Signal<Potato> = Signal::new();
-        let mut no_clone_signal: SignalNoClone<Potato> = SignalNoClone::new();
-
-        basic_signal.connect(|msg| println!("Slot1 received: {}", msg));
-        basic_signal.connect(|msg| println!("Slot2 received: {}", msg));
-
-        complex_signal.connect(|msg| println!("Complex Slot1 received: {:#?}", msg));
-        complex_signal.connect(|msg| println!("Complex Slot2 received: {:#?}", msg));
-
-        no_clone_signal.connect(|msg| println!("NoClone Slot1 received: {:#?}", msg));
-        // No Clone channels should not be connected twice
-        //no_clone_signal.connect(|msg| println!("NoClone Slot2 received: {:#?}", msg));
-
-        basic_signal.emit(10);
-        basic_signal.emit(20);
-        complex_signal.emit(Potato { number: 42 });
-        complex_signal.emit(Potato { number: 69 });
-        no_clone_signal.emit(Potato { number: 128 }).await;
-        no_clone_signal.emit(Potato { number: 256 }).await;
-        sleep(Duration::from_millis(100)).await;
-    });
-    std::thread::sleep(std::time::Duration::from_secs(1));
 }
