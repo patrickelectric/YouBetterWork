@@ -1,12 +1,13 @@
-use tokio::sync::{broadcast, mpsc};
 use std::thread;
+use tokio::sync::{broadcast, mpsc};
+use tokio::time::{sleep, Duration};
 
+use lazy_static::lazy_static;
 use std::collections::HashMap;
 use std::future::Future;
+use std::sync::Mutex;
 use tokio::runtime::Runtime;
 use tokio::task::JoinHandle;
-use std::sync::Mutex;
-use lazy_static::lazy_static;
 use uuid::Uuid;
 
 // More information about this can be detailed explained here:
@@ -66,12 +67,12 @@ impl Drop for TaskMaster {
     }
 }
 
-lazy_static ! {
+lazy_static! {
     static ref TASK_MASTER: Mutex<TaskMaster> = Mutex::new(TaskMaster::new());
 }
 
 pub fn _spawn<F>(name: String, f: F)
-    where
+where
     F: Future<Output = ()> + Send + 'static,
     F::Output: Send + 'static,
 {
@@ -85,9 +86,7 @@ struct Signal<T> {
 impl<T: Send + Clone + 'static> Signal<T> {
     fn new() -> Self {
         let (tx, _) = broadcast::channel(100);
-        Signal {
-            sender: tx,
-        }
+        Signal { sender: tx }
     }
 
     fn connect(&self, slot: impl Fn(T) + Send + 'static + Clone) {
@@ -97,7 +96,7 @@ impl<T: Send + Clone + 'static> Signal<T> {
     fn connect_named(&self, slot: impl Fn(T) + Send + 'static + Clone, name: String) {
         let mut receiver = self.sender.subscribe();
 
-        _spawn(name.clone() ,async move {
+        _spawn(name.clone(), async move {
             loop {
                 match receiver.recv().await {
                     Ok(msg) => slot(msg),
@@ -113,11 +112,14 @@ impl<T: Send + Clone + 'static> Signal<T> {
         });
     }
 
+    fn emit_result(&self, message: T) -> Result<usize, broadcast::error::SendError<T>> {
+        self.sender.send(message)
+    }
+
     fn emit(&self, message: T) {
-        let _ = self.sender.send(message);
+        let _ = self.emit_result(message);
     }
 }
-
 
 // Move it to another file and use same traits and names as signal (No SignalNoClone)
 struct SignalNoClone<T> {
@@ -139,8 +141,11 @@ impl<T: Send + 'static> SignalNoClone<T> {
     }
 
     fn connect_named(&mut self, slot: impl Fn(T) + Send + 'static + Clone, name: String) {
+        if self.receiver.is_none() {
+            todo!("You can't connect twice in a no clone channel. Return error here");
+        }
         let mut receiver = self.receiver.take().unwrap();
-        _spawn(name.clone() ,async move {
+        _spawn(name.clone(), async move {
             // This method returns `None` if the channel has been closed and there are
             // no remaining messages in the channel's buffer. This indicates that no
             // further values can ever be received from this `Receiver`. The channel is
@@ -148,23 +153,29 @@ impl<T: Send + 'static> SignalNoClone<T> {
             while let Some(msg) = receiver.recv().await {
                 slot(msg)
             }
+            println!("Closing NoClone channel for {}", name);
         });
     }
 
-    fn emit(&self, message: T) {
-        let _ = self.sender.send(message);
+    async fn emit_result(&self, message: T) -> Result<(), mpsc::error::SendError<T>> {
+        self.sender.send(message).await
+    }
+
+    async fn emit(&self, message: T) {
+        let _ = self.emit_result(message).await;
     }
 }
 
 #[derive(Clone, Debug)]
 struct Potato {
-    pub number: i64
+    pub number: i64,
 }
 
 fn main() {
     _spawn("Main loop".into(), async {
         let basic_signal = Signal::new();
         let complex_signal: Signal<Potato> = Signal::new();
+        let mut no_clone_signal: SignalNoClone<Potato> = SignalNoClone::new();
 
         basic_signal.connect(|msg| println!("Slot1 received: {}", msg));
         basic_signal.connect(|msg| println!("Slot2 received: {}", msg));
@@ -172,10 +183,17 @@ fn main() {
         complex_signal.connect(|msg| println!("Complex Slot1 received: {:#?}", msg));
         complex_signal.connect(|msg| println!("Complex Slot2 received: {:#?}", msg));
 
+        no_clone_signal.connect(|msg| println!("NoClone Slot1 received: {:#?}", msg));
+        // No Clone channels should not be connected twice
+        //no_clone_signal.connect(|msg| println!("NoClone Slot2 received: {:#?}", msg));
+
         basic_signal.emit(10);
         basic_signal.emit(20);
         complex_signal.emit(Potato { number: 42 });
         complex_signal.emit(Potato { number: 69 });
+        no_clone_signal.emit(Potato { number: 128 }).await;
+        no_clone_signal.emit(Potato { number: 256 }).await;
+        sleep(Duration::from_millis(100)).await;
     });
     std::thread::sleep(std::time::Duration::from_secs(1));
 }
