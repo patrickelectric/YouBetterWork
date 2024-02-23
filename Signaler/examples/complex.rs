@@ -1,4 +1,4 @@
-use signal::{Signal, SignalNoClone, _spawn};
+use signal::{Signal, _spawn};
 use tokio::time::{sleep, Duration};
 
 struct ComplexGenerator {
@@ -23,7 +23,7 @@ impl ComplexGenerator {
         &self.__signal_index
     }
 
-    fn emit_index(&self)  {
+    fn emit_index(&self) {
         self.__signal_index.emit(self.index);
     }
 }
@@ -32,7 +32,9 @@ fn main() {
     _spawn("Main loop".into(), async {
         let mut generator = ComplexGenerator::new();
 
-        generator.on_index_changed().connect(|msg| println!("Slot1 received: {}", msg));
+        generator
+            .on_index_changed()
+            .connect(|msg| println!("Slot1 received: {}", msg));
         generator.run();
         sleep(Duration::from_millis(100)).await;
     });

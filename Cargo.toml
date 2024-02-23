@@ -1,15 +1,3 @@
-[package]
-name = "signal"
-version = "0.1.0"
-edition = "2021"
-
-[lib]
-
-[[test]]
-name = "simple"
-bench = true
-
-[dependencies]
-lazy_static = "1"
-tokio = { version = "1", features = ["full"] }
-uuid = { version = "1.7.0", features = ["v4", "fast-rng"] }
+[workspace]
+members = ["Decorators", "Signaler"]
+resolver = "1"

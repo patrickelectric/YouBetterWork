@@ -77,6 +77,7 @@ where
     TASK_MASTER.lock().unwrap().spawn(name, f);
 }
 
+#[derive(Clone)]
 pub struct Signal<T> {
     sender: broadcast::Sender<T>,
 }
