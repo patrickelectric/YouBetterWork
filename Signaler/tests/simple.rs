@@ -1,6 +1,3 @@
-#![feature(test)] // Enable the 'test' feature
-extern crate test;
-
 #[derive(Clone, Debug, PartialEq)]
 struct Potato {
     pub number: i64,
@@ -11,6 +8,7 @@ struct Atom {
     pub number: i64,
 }
 
+use decorators::*;
 use signal::{Signal, SignalNoClone};
 use std::sync::{Arc, Mutex};
 use tokio::runtime::Runtime;
@@ -101,6 +99,122 @@ fn test_complex_signal_behavior() {
             captured_no_clone_signal.lock().unwrap()[0],
             Atom { number: 69 }
         );
+    });
+
+    std::thread::sleep(std::time::Duration::from_secs(1));
+}
+
+use std::time::Instant;
+
+#[derive(Default, Signaler)]
+struct SimpleTalker {
+    #[property]
+    value: u64,
+}
+
+#[derive(Signaler)]
+struct Talker {
+    #[property]
+    values: Vec<u8>,
+}
+
+impl Default for Talker {
+    fn default() -> Self {
+        const BYTES_TO_GENERATE: usize = 1 * 2_usize.pow(20); // 1MB
+        Self {
+            values: vec![0; BYTES_TO_GENERATE],
+        }
+    }
+}
+
+#[test]
+fn test_joao_hypothesis() {
+    let runtime = Runtime::new().unwrap();
+    runtime.block_on(async move {
+        let tasks = [(); 4000].map(|_| TalkerSignaler::new());
+        let start = Instant::now();
+        println!("Tasks initialized");
+        for task in tasks {
+            task.emit_values();
+        }
+        println!("Time elapsed in series emission: {:?}", start.elapsed());
+        sleep(Duration::from_millis(100)).await;
+    });
+
+    std::thread::sleep(std::time::Duration::from_secs(1));
+}
+
+#[test]
+fn test_joao_example() {
+    let runtime = Runtime::new().unwrap();
+    runtime.block_on(async move {
+        const MINIMUM_MESSAGES_TO_RECEIVE: u64 = 1000;
+        let mut task = SimpleTalkerSignaler::new();
+        let should_wait = Arc::new(Mutex::new(true));
+        let cloned_should_wait = should_wait.clone();
+
+        task.on_value_changed().connect(move |value| {
+            if value == MINIMUM_MESSAGES_TO_RECEIVE {
+                *cloned_should_wait.lock().unwrap() = false;
+            }
+        });
+
+        let start = Instant::now();
+        for value in 0..=MINIMUM_MESSAGES_TO_RECEIVE {
+            task.set_value(value)
+        }
+
+        loop {
+            sleep(Duration::from_millis(1)).await;
+            if *should_wait.lock().unwrap() == false {
+                break;
+            }
+        }
+
+        println!(
+            "Time elapsed in sending {} emissions: {:?}",
+            MINIMUM_MESSAGES_TO_RECEIVE,
+            start.elapsed()
+        );
+    });
+
+    std::thread::sleep(std::time::Duration::from_secs(1));
+}
+
+#[test]
+fn test_joao_chain_hypothesis() {
+    let runtime = Runtime::new().unwrap();
+    runtime.block_on(async move {
+        let tasks = [(); 4000].map(|_| Arc::new(Mutex::new(TalkerSignaler::new())));
+
+        for pair in tasks.windows(2) {
+            let first = pair[0].clone();
+            let second = pair[1].clone();
+            let first_lock = first.lock().unwrap();
+            first_lock
+                .on_values_changed()
+                .connect(move |values| second.lock().unwrap().set_values(values))
+        }
+        let should_wait = Arc::new(Mutex::new(true));
+        let cloned_should_wait = should_wait.clone();
+        tasks
+            .last()
+            .unwrap()
+            .lock()
+            .unwrap()
+            .on_values_changed()
+            .connect(move |_| *cloned_should_wait.lock().unwrap() = false);
+
+        tasks.first().unwrap().lock().unwrap().emit_values();
+        let start = Instant::now();
+        loop {
+            sleep(Duration::from_millis(1)).await;
+            if *should_wait.lock().unwrap() == false {
+                break;
+            }
+        }
+        println!("Time elapsed in chain event: {:?}", start.elapsed());
+        sleep(Duration::from_millis(100)).await;
     });
 
     std::thread::sleep(std::time::Duration::from_secs(1));

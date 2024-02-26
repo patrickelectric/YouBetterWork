@@ -28,7 +28,7 @@ impl TaskMaster {
         F: Future<Output = ()> + Send + 'static,
         F::Output: Send + 'static,
     {
-        println!("Starting {}", name.clone());
+        // println!("Starting {}", name.clone());
         let task = self.runtime.spawn(f);
         self.tasks.insert(name, task);
     }
@@ -100,7 +100,7 @@ impl<T: Send + Clone + 'static> Signal<T> {
                 match receiver.recv().await {
                     Ok(msg) => slot(msg),
                     Err(broadcast::error::RecvError::Closed) => {
-                        println!("Closing channel for {}", name);
+                        // println!("Closing channel for {}", name);
                         break;
                     }
                     Err(e) => {

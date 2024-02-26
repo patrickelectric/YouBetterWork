@@ -2,11 +2,7 @@ extern crate proc_macro2;
 
 use proc_macro::TokenStream;
 use quote::{format_ident, quote};
-use syn::{
-    parse_macro_input, ItemStruct,
-};
-
-
+use syn::{parse_macro_input, ItemStruct};
 
 #[proc_macro_derive(Signaler, attributes(property))]
 pub fn derive_decorator(input: TokenStream) -> TokenStream {
