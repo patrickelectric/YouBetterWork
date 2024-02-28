@@ -118,14 +118,16 @@ pub fn derive_decorator(input: TokenStream) -> TokenStream {
             #signals_def
         }
 
-        impl #impl_generics #signaler_object_name #ty_generics #where_clause  {
-            pub fn new() -> Self {
+        impl Default for #signaler_object_name {
+            fn default() -> Self {
                 Self {
-                    data: #struct_name::default(),
-                    // self_signal: Signal::new(),
+                    data: Default::default(),
                     #signals_new
                 }
             }
+        }
+
+        impl #impl_generics #signaler_object_name #ty_generics #where_clause  {
             #functions
 
             #opt_decs
