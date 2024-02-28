@@ -134,7 +134,7 @@ fn test_joao_hypothesis() {
     let runtime = Runtime::new().unwrap();
     runtime.block_on(async move {
         const SIZE: usize = 4000;
-        let tasks = [(); SIZE].map(|_| TalkerSignaler::new());
+        let tasks = [(); SIZE].map(|_| TalkerSignaler::default());
         let start = Instant::now();
         for task in tasks {
             task.emit_values();
@@ -155,7 +155,7 @@ fn test_joao_example() {
     let runtime = Runtime::new().unwrap();
     runtime.block_on(async move {
         const MINIMUM_MESSAGES_TO_RECEIVE: u64 = 1000;
-        let mut task = SimpleTalkerSignaler::new();
+        let mut task = SimpleTalkerSignaler::default();
         let should_wait = Arc::new(Mutex::new(true));
         let cloned_should_wait = should_wait.clone();
 
@@ -192,7 +192,7 @@ fn test_joao_chain_hypothesis() {
     let runtime = Runtime::new().unwrap();
     runtime.block_on(async move {
         const SIZE: usize = 4000;
-        let tasks = [(); SIZE].map(|_| Arc::new(Mutex::new(TalkerSignaler::new())));
+        let tasks = [(); SIZE].map(|_| Arc::new(Mutex::new(TalkerSignaler::default())));
 
         for pair in tasks.windows(2) {
             let first = pair[0].clone();

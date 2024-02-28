@@ -12,7 +12,7 @@ struct Person {
 
 fn main() {
     _spawn("Main loop".into(), async {
-        let mut obj = PersonSignaler::new();
+        let mut obj = PersonSignaler::default();
         obj.on_name_changed()
             .connect(|new_value| println!("Name changed: {}", new_value));
         obj.set_name("Patrick".into());
