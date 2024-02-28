@@ -14,6 +14,8 @@ use std::sync::{Arc, Mutex};
 use tokio::runtime::Runtime;
 use tokio::time::{sleep, Duration};
 
+use test_log::test;
+
 struct Tester<T> {
     captured: Arc<Mutex<Vec<T>>>,
     values: Vec<T>,
@@ -131,13 +133,17 @@ impl Default for Talker {
 fn test_joao_hypothesis() {
     let runtime = Runtime::new().unwrap();
     runtime.block_on(async move {
-        let tasks = [(); 4000].map(|_| TalkerSignaler::new());
+        const SIZE: usize = 4000;
+        let tasks = [(); SIZE].map(|_| TalkerSignaler::new());
         let start = Instant::now();
-        println!("Tasks initialized");
         for task in tasks {
             task.emit_values();
         }
-        println!("Time elapsed in series emission: {:?}", start.elapsed());
+        println!(
+            "Time elapsed in {} series emission: {:?}",
+            SIZE,
+            start.elapsed()
+        );
         sleep(Duration::from_millis(100)).await;
     });
 
@@ -185,7 +191,8 @@ fn test_joao_example() {
 fn test_joao_chain_hypothesis() {
     let runtime = Runtime::new().unwrap();
     runtime.block_on(async move {
-        let tasks = [(); 4000].map(|_| Arc::new(Mutex::new(TalkerSignaler::new())));
+        const SIZE: usize = 4000;
+        let tasks = [(); SIZE].map(|_| Arc::new(Mutex::new(TalkerSignaler::new())));
 
         for pair in tasks.windows(2) {
             let first = pair[0].clone();
@@ -213,7 +220,11 @@ fn test_joao_chain_hypothesis() {
                 break;
             }
         }
-        println!("Time elapsed in chain event: {:?}", start.elapsed());
+        println!(
+            "Time elapsed in {} chain events: {:?}",
+            SIZE,
+            start.elapsed()
+        );
         sleep(Duration::from_millis(100)).await;
     });
 

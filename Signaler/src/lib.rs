@@ -6,6 +6,7 @@ use std::future::Future;
 use std::sync::Mutex;
 use tokio::runtime::Runtime;
 use tokio::task::JoinHandle;
+use tracing::*;
 use uuid::Uuid;
 
 // More information about this can be detailed explained here:
@@ -28,7 +29,7 @@ impl TaskMaster {
         F: Future<Output = ()> + Send + 'static,
         F::Output: Send + 'static,
     {
-        // println!("Starting {}", name.clone());
+        debug!("Starting task {}", name.clone());
         let task = self.runtime.spawn(f);
         self.tasks.insert(name, task);
     }
@@ -49,7 +50,7 @@ impl TaskMaster {
 
 impl Drop for TaskMaster {
     fn drop(&mut self) {
-        println!("Task master is closing: {:#?}", self.tasks.keys());
+        debug!("Task master is closing: {:#?}", self.tasks.keys());
         self.clear_finished();
 
         loop {
@@ -61,7 +62,7 @@ impl Drop for TaskMaster {
             println!("Waiting for tasks to finish: {:?}", running_tasks);
             std::thread::sleep(std::time::Duration::from_millis(2000));
         }
-        todo!("We need to ensure that drop is being called")
+        debug!("Task master is closed.")
     }
 }
 
@@ -93,6 +94,7 @@ impl<T: Send + Clone + 'static> Signal<T> {
     }
 
     pub fn connect_named(&self, slot: impl Fn(T) + Send + 'static, name: String) {
+        debug!("Channel {} created", name);
         let mut receiver = self.sender.subscribe();
 
         _spawn(name.clone(), async move {
@@ -100,14 +102,15 @@ impl<T: Send + Clone + 'static> Signal<T> {
                 match receiver.recv().await {
                     Ok(msg) => slot(msg),
                     Err(broadcast::error::RecvError::Closed) => {
-                        // println!("Closing channel for {}", name);
+                        debug!("Channel {} is closed", name);
                         break;
                     }
                     Err(e) => {
-                        dbg!(e);
+                        debug!("Channel {} error {:#?}", name, e);
                     }
                 }
             }
+            debug!("Channel {} finished event loop", name);
         });
     }
 
@@ -140,6 +143,7 @@ impl<T: Send + 'static> SignalNoClone<T> {
     }
 
     pub fn connect_named(&mut self, slot: impl Fn(T) + Send + 'static, name: String) {
+        debug!("Channel NoClone {} created", name);
         if self.receiver.is_none() {
             todo!("You can't connect twice in a no clone channel. Return error here");
         }
@@ -152,7 +156,7 @@ impl<T: Send + 'static> SignalNoClone<T> {
             while let Some(msg) = receiver.recv().await {
                 slot(msg)
             }
-            println!("Closing NoClone channel for {}", name);
+            debug!("Closing NoClone channel {}", name);
         });
     }
 
