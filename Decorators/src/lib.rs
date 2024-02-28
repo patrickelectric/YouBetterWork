@@ -101,7 +101,5 @@ pub fn derive_decorator(input: TokenStream) -> TokenStream {
         }
     };
 
-    dbg!(&k.to_string());
-
     TokenStream::from(k)
 }
