@@ -23,9 +23,10 @@ pub fn derive_decorator(input: TokenStream) -> TokenStream {
         }
     }
 
-    let signals_def = properties.iter().fold(quote!(), |_acc, (name, ty)| {
+    let signals_def = properties.iter().fold(quote!(), |acc, (name, ty)| {
         let signal_name = format_ident!("signal_{name}");
         quote! {
+            #acc
             #signal_name: Signal<#ty>,
         }
     });
@@ -37,31 +38,30 @@ pub fn derive_decorator(input: TokenStream) -> TokenStream {
         let set_name = format_ident!("set_{name}");
         quote! {
             #acc
+
             pub fn #name(&self) -> #ty {
                 self.data.#name.clone()
             }
 
-            #acc
             pub fn #set_name(&mut self, value: #ty) {
                 self.data.#name = value;
                 self.#emit_name()
             }
 
-            #acc
             pub fn #on_name(&self) -> &Signal<#ty> {
                 &self.#signal_name
             }
 
-            #acc
             pub fn #emit_name(&self) {
                 self.#signal_name.emit(self.data.#name.clone());
             }
         }
     });
 
-    let signals_new = properties.iter().fold(quote!(), |_acc, (name, _ty)| {
+    let signals_new = properties.iter().fold(quote!(), |acc, (name, _ty)| {
         let signal_name = format_ident!("signal_{name}");
         quote! {
+            #acc
             #signal_name: Signal::new(),
         }
     });
