@@ -31,11 +31,15 @@ pub fn derive_decorator(input: TokenStream) -> TokenStream {
         }
     });
 
+    let mut all_properties_emit = vec![];
     let functions = properties.iter().fold(quote!(), |acc, (name, ty)| {
         let on_name = format_ident!("on_{name}_changed");
         let emit_name = format_ident!("emit_{name}");
         let signal_name = format_ident!("signal_{name}");
         let set_name = format_ident!("set_{name}");
+
+        all_properties_emit.push(emit_name.clone());
+
         quote! {
             #acc
 
@@ -57,6 +61,30 @@ pub fn derive_decorator(input: TokenStream) -> TokenStream {
             }
         }
     });
+
+    let all_properties_emit = all_properties_emit.iter().fold(quote!(), |acc, emit_name| {
+        quote! {
+            #acc
+            self.#emit_name();
+        }
+    });
+    let functions = quote! {
+        #functions
+
+        pub fn emit_all_properties(&self) {
+            #all_properties_emit
+        }
+
+        /*
+        pub fn on_self_changed(&self) -> &Signal<#struct_name> {
+            &self.self_signal
+        }
+
+        pub fn emit(&self) {
+            self.self_signal.emit(self.data.clone())
+        }
+        */
+    };
 
     let signals_new = properties.iter().fold(quote!(), |acc, (name, _ty)| {
         let signal_name = format_ident!("signal_{name}");
@@ -85,6 +113,8 @@ pub fn derive_decorator(input: TokenStream) -> TokenStream {
         struct #signaler_object_name {
             data: #struct_name,
 
+            // self_signal: Signal<#struct_name>,
+
             #signals_def
         }
 
@@ -92,6 +122,7 @@ pub fn derive_decorator(input: TokenStream) -> TokenStream {
             pub fn new() -> Self {
                 Self {
                     data: #struct_name::default(),
+                    // self_signal: Signal::new(),
                     #signals_new
                 }
             }
