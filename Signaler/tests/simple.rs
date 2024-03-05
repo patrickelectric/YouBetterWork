@@ -9,7 +9,7 @@ struct Atom {
 }
 
 use decorators::*;
-use signal::{Signal, SignalNoClone};
+use signal::*;
 use std::sync::{Arc, Mutex};
 use tokio::runtime::Runtime;
 use tokio::time::{sleep, Duration};
@@ -133,10 +133,10 @@ impl Default for Talker {
 fn test_joao_hypothesis() {
     let runtime = Runtime::new().unwrap();
     runtime.block_on(async move {
-        const SIZE: usize = 4000;
-        let tasks = [(); SIZE].map(|_| TalkerSignaler::default());
+        const SIZE: usize = 2000;
+        let mut tasks = [(); SIZE].map(|_| TalkerSignaler::default());
         let start = Instant::now();
-        for task in tasks {
+        for mut task in tasks {
             task.emit_values();
         }
         println!(

@@ -1,5 +1,5 @@
 use decorators::*;
-use signal::{Signal, SignalNoClone};
+use signal::*;
 use tokio::runtime::Runtime;
 use tokio::time::{sleep, Duration};
 
@@ -192,7 +192,7 @@ impl CharacterSignaler {
 }
 
 #[test]
-fn test_joao_hypothesis() {
+fn test_joao_hypothesis_rpg() {
     let runtime = Runtime::new().unwrap();
     runtime.block_on(async move {
         const SIZE: usize = 10;

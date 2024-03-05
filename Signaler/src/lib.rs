@@ -59,7 +59,7 @@ impl Drop for TaskMaster {
                 break;
             }
 
-            println!("Waiting for tasks to finish: {:?}", running_tasks);
+            debug!("Waiting for tasks to finish: {:?}", running_tasks);
             std::thread::sleep(std::time::Duration::from_millis(2000));
         }
         debug!("Task master is closed.")
@@ -167,4 +167,31 @@ impl<T: Send + 'static> SignalNoClone<T> {
     pub async fn emit(&self, message: T) {
         let _ = self.emit_result(message).await;
     }
+}
+
+pub struct SignalInner<T, K> {
+    pub calls: Vec<fn(&mut T, K)>,
+}
+
+impl<T, K: Clone> SignalInner<T, K> {
+    pub fn new() -> Self {
+        Self {
+            calls: vec![],
+        }
+    }
+
+    pub fn add(&mut self, slot: fn(&mut T, K)) {
+        self.calls.push(slot);
+    }
+
+    /*
+    #[inline]
+    pub fn run(&mut self, instance: &mut T, value: K) {
+        let mut calls = std::mem::replace(&mut self.calls, Vec::new());
+        for call in calls.iter_mut() {
+            call(instance, value.clone());
+        }
+        self.calls = calls;
+    }
+    */
 }
