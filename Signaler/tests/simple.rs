@@ -8,8 +8,8 @@ struct Atom {
     pub number: i64,
 }
 
-use decorators::*;
-use signal::*;
+use sinais_decorators::*;
+use sinais::*;
 use std::sync::{Arc, Mutex};
 use tokio::runtime::Runtime;
 use tokio::time::{sleep, Duration};

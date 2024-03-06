@@ -1,4 +1,4 @@
-use signal::{Signal, _spawn};
+use sinais::{Signal, _spawn};
 use tokio::time::{sleep, Duration};
 
 struct ComplexGenerator {

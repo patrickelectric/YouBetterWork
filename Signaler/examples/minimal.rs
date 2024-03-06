@@ -1,4 +1,4 @@
-use signal::{Signal, SignalNoClone, _spawn};
+use sinais::{Signal, SignalNoClone, _spawn};
 use tokio::time::{sleep, Duration};
 
 #[derive(Clone, Debug)]

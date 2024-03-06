@@ -1,5 +1,5 @@
 [package]
-name = "signal"
+name = "sinais"
 version = "0.1.0"
 edition = "2021"
 
@@ -10,7 +10,7 @@ name = "simple"
 bench = true
 
 [dependencies]
-decorators = { path = "../Decorators" }
+sinais-decorators = { path = "../Decorators" }
 lazy_static = "1"
 tokio = { version = "1", features = ["full"] }
 tracing = "0.1"
