@@ -1,5 +1,5 @@
-use signal::*;
 use decorators::*;
+use signal::*;
 
 use test_log::test;
 

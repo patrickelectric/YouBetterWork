@@ -175,9 +175,7 @@ pub struct SignalInner<T, K> {
 
 impl<T, K: Clone> SignalInner<T, K> {
     pub fn new() -> Self {
-        Self {
-            calls: vec![],
-        }
+        Self { calls: vec![] }
     }
 
     pub fn add(&mut self, slot: fn(&mut T, K)) {
