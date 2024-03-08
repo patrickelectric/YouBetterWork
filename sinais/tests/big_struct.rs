@@ -1,4 +1,4 @@
-use sinais_decorators::*;
+use sinais_macro::*;
 use sinais::*;
 use tokio::runtime::Runtime;
 use tokio::time::{sleep, Duration};

@@ -10,7 +10,7 @@ name = "simple"
 bench = true
 
 [dependencies]
-sinais-decorators = { path = "../Decorators" }
+sinais_macro = { version = "0", path = "../sinais_macro" }
 lazy_static = "1"
 tokio = { version = "1", features = ["full"] }
 tracing = "0.1"

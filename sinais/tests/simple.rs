@@ -8,7 +8,7 @@ struct Atom {
     pub number: i64,
 }
 
-use sinais_decorators::*;
+use sinais_macro::*;
 use sinais::*;
 use std::sync::{Arc, Mutex};
 use tokio::runtime::Runtime;
