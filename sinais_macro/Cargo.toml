@@ -2,6 +2,10 @@
 name = "sinais_macro"
 version = "0.1.0"
 edition = "2021"
+description = "A macro repository for the `sinais` simple signal event library"
+license = "MIT"
+repository = "https://github.com/patrickelectric"
+
 
 [lib]
 proc-macro = true
